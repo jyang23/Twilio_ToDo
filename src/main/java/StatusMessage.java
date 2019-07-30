@@ -2,13 +2,15 @@
 //TODO BOT
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+
 import com.twilio.twiml.messaging.Body;
 import com.twilio.twiml.messaging.Message;
 import com.twilio.twiml.MessagingResponse;
 import static spark.Spark.get;
 import static spark.Spark.post;
 
-public class TwilioServlet {
+public class StatusMessage {
 
     public static void main(String[] args) {
         //initialize base list of items
@@ -24,11 +26,17 @@ public class TwilioServlet {
         post("/sms", (req, res) -> {
             res.type("application/xml");
 
-
             //req.body() gets the entire body of the message: ToCountry=GB&ToState=&SmsMessageSid=SMc52bea78ca1df688d...
             //converts the body of the message filtered in a clear text
             String bodymessage = req.queryParams("Body");
 
+            //For quest Message Received, paste the MessageSID and sig
+            //Could not figure out how to code this into the message header
+            //Could not figure out how to get the status of the response message
+            String messageSID = req.queryParams("MessageSid");
+            String sig = req.headers("X-Twilio-Signature");
+//            System.out.println(messageSID);
+//            System.out.println(sig);
 //==========Add=========================================================================================================
             if(bodymessage.contains("add")){
                 String[] messageSPLIT = bodymessage.split(" ");
@@ -37,7 +45,7 @@ public class TwilioServlet {
 
                 for(int i = 0; i <messageSPLIT.length; i++)
                 {
-                        itemList.add(messageSPLIT[i]);
+                    itemList.add(messageSPLIT[i]);
                 }
                 itemList.remove("add");
 
@@ -77,7 +85,7 @@ public class TwilioServlet {
                     output +=((i+1)+". "+ items.get(i)+" ");
                 }
                 Body body = new Body
-                        .Builder(output)
+                        .Builder(messageSID+"\n"+sig+"\n"+output+"-delivered")
                         .build();
                 Message sms = new Message
                         .Builder()
@@ -127,7 +135,7 @@ public class TwilioServlet {
             else
             {
                 Body body = new Body
-                        .Builder("Bye!")
+                        .Builder("What?")
                         .build();
                 Message sms = new Message
                         .Builder()
@@ -139,6 +147,28 @@ public class TwilioServlet {
                         .build();
                 return twiml.toXml();
             }
+        });
+
+//==========Status======================================================================================================
+        post("/status", (req, res) -> {
+            res.status(200);
+
+            String statusmessage = req.queryParams("SmsStatus");
+            {
+                Body body = new Body
+                        .Builder(statusmessage)
+                        .build();
+                Message sms = new Message
+                        .Builder()
+                        .body(body)
+                        .build();
+                MessagingResponse twiml = new MessagingResponse
+                        .Builder()
+                        .message(sms)
+                        .build();
+                return twiml.toXml();
+            }
+
         });
     }
 }
